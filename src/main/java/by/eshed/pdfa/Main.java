@@ -81,7 +81,7 @@ public final class Main {
         }
         Path output = Path.of(args[1]);
         List<String> inputs = new ArrayList<>();
-        PdfAFlavourOption flavour = PdfAFlavourOption.PDF_A_2B;
+        PdfAFlavourOption flavour = PdfAFlavourOption.PDF_A_1B;
         for (int i = 2; i < args.length; i++) {
             if (i == args.length - 1 && isFlavourToken(args[i])) {
                 flavour = PdfAFlavourOption.parse(args[i]);
@@ -114,7 +114,7 @@ public final class Main {
             System.exit(1);
             return;
         }
-        PdfAFlavourOption flavour = args.length > 2 ? PdfAFlavourOption.parse(args[2]) : PdfAFlavourOption.PDF_A_2B;
+        PdfAFlavourOption flavour = args.length > 2 ? PdfAFlavourOption.parse(args[2]) : PdfAFlavourOption.PDF_A_1B;
         byte[] pdfBytes = Files.readAllBytes(Path.of(args[1]));
         ValidationOutcome outcome = VeraPdfValidator.validate(pdfBytes, flavour.veraPdfFlavour());
         System.out.println(HttpResponses.validationJson(outcome));
@@ -155,7 +155,7 @@ public final class Main {
     private static void printUsage() {
         System.err.println("Использование:");
         System.err.println("  serve [port]");
-        System.err.println("  convert <output.pdf> <input1> [input2 ...] [flavour=1b|2b|3b]");
-        System.err.println("  validate <input.pdf> [flavour=1b|2b|3b]");
+        System.err.println("  convert <output.pdf> <input1> [input2 ...] [flavour=1a|1b]");
+        System.err.println("  validate <input.pdf> [flavour=1a|1b]");
     }
 }

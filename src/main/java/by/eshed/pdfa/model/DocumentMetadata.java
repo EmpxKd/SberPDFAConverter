@@ -16,6 +16,7 @@ public final class DocumentMetadata {
     private final String sourceSystem;
     private final String documentType;
     private final LocalDate documentDate;
+    private final String language;
 
     private DocumentMetadata(Builder b) {
         this.title = b.title;
@@ -24,6 +25,7 @@ public final class DocumentMetadata {
         this.sourceSystem = b.sourceSystem;
         this.documentType = b.documentType;
         this.documentDate = b.documentDate;
+        this.language = b.language;
     }
 
     public String title() {
@@ -50,6 +52,14 @@ public final class DocumentMetadata {
         return documentDate;
     }
 
+    /**
+     * Язык документа (BCP-47/ISO 639, например "ru") для каталожного {@code /Lang} —
+     * нужен только для тегированного PDF/A-1a (PLAN.md, задача 5). Не задан → {@code null}.
+     */
+    public String language() {
+        return language;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -61,6 +71,7 @@ public final class DocumentMetadata {
         private String sourceSystem;
         private String documentType;
         private LocalDate documentDate;
+        private String language;
 
         public Builder title(String title) {
             this.title = blankToNull(title);
@@ -89,6 +100,11 @@ public final class DocumentMetadata {
 
         public Builder documentDate(LocalDate documentDate) {
             this.documentDate = documentDate;
+            return this;
+        }
+
+        public Builder language(String language) {
+            this.language = blankToNull(language);
             return this;
         }
 

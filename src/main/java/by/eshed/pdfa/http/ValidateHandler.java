@@ -11,9 +11,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * POST /api/v1/validate?flavour=2b - тело запроса - произвольный PDF, проверка через veraPDF.
+ * POST /api/v1/validate?flavour=1b - тело запроса - произвольный PDF, проверка через veraPDF.
  * Нужен и для приёма документов от систем-источников (DECISIONS.md: "привязка к источнику/сроку
- * хранения"), и для ручной проверки результата конвертера.
+ * хранения"), и для ручной проверки результата конвертера. Флавор валидации ограничен PDF/A-1
+ * ({@code 1a}/{@code 1b}, дефолт 1b) тем же {@link PdfAFlavourOption#parse} — конвертер фиксирован
+ * на части 1 стандарта (PLAN.md), валидация входящих PDF проверяется на соответствие ей же.
  */
 public final class ValidateHandler implements HttpHandler {
 

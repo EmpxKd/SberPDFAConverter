@@ -11,6 +11,7 @@ import by.eshed.pdfa.metadata.MetadataMapper;
 import by.eshed.pdfa.model.ConversionRequest;
 import by.eshed.pdfa.model.ConversionResult;
 import by.eshed.pdfa.model.PageSource;
+import by.eshed.pdfa.model.PdfAFlavourOption;
 import by.eshed.pdfa.model.SourceFormat;
 import by.eshed.pdfa.ocr.EmbeddedFonts;
 import by.eshed.pdfa.ocr.InvisibleTextLayerWriter;
@@ -19,6 +20,7 @@ import by.eshed.pdfa.ocr.OcrUnavailableException;
 import by.eshed.pdfa.ocr.RecognizedWord;
 import by.eshed.pdfa.validation.ValidationOutcome;
 import by.eshed.pdfa.validation.VeraPdfValidator;
+import org.apache.pdfbox.pdfwriter.compress.CompressParameters;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 
@@ -51,10 +53,15 @@ public final class ScanToPdfAConverter {
     public ConversionResult convert(ConversionRequest request) {
         List<NormalizedPage> normalizedPages = normalizeAll(request.pages());
 
+        // PLAN.md, задача 5: тегированный PDF (/MarkInfo, /StructTreeRoot) нужен только для 1a -
+        // 1b и выше его не требуют и не должны получать лишнюю структуру.
+        boolean tagged = request.flavour() == PdfAFlavourOption.PDF_A_1A;
+        String language = request.metadata().language() != null ? request.metadata().language() : "ru";
+
         PdfABuilder builder = new PdfABuilder(jpegQuality);
         BuiltDocument built;
         try {
-            built = builder.build(normalizedPages);
+            built = builder.build(normalizedPages, tagged, language);
         } catch (IOException e) {
             throw new PdfAConversionException("Не удалось собрать PDF из нормализованных страниц", e);
         }
@@ -88,7 +95,16 @@ public final class ScanToPdfAConverter {
             byte[] pdfBytes;
             try {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                document.save(out);
+                if (request.flavour().part() == 1) {
+                    // PDF/A-1 наследует ограничения PDF 1.4 (ISO 19005-1, 6.1.4): кросс-секционные
+                    // потоки (xref streams) и компрессированные потоки объектов появились только
+                    // в PDF 1.5 и на части 1 запрещены. PDFBox 3.x по умолчанию (save без
+                    // параметров) всегда пишет их - нужно явно понизить версию и выключить сжатие.
+                    document.setVersion(1.4f);
+                    document.save(out, CompressParameters.NO_COMPRESSION);
+                } else {
+                    document.save(out);
+                }
                 pdfBytes = out.toByteArray();
             } catch (IOException e) {
                 throw new PdfAConversionException("Не удалось сохранить итоговый PDF", e);

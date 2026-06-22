@@ -5,7 +5,6 @@ import by.eshed.pdfa.model.ConversionResult;
 import by.eshed.pdfa.model.DocumentMetadata;
 import by.eshed.pdfa.model.PageSource;
 import by.eshed.pdfa.model.PdfAFlavourOption;
-import by.eshed.pdfa.model.SignatureAttachment;
 import by.eshed.pdfa.model.SourceFormat;
 import by.eshed.pdfa.pipeline.PdfAConversionException;
 import by.eshed.pdfa.pipeline.ScanToPdfAConverter;
@@ -23,9 +22,12 @@ import java.util.logging.Logger;
 /**
  * POST /api/v1/convert/scan - multipart/form-data: одна или несколько файловых частей "page"
  * (порядок сохраняется, многостраничный TIFF и scanner-PDF разворачиваются в несколько страниц),
- * опциональная файловая часть "signature" (поднимает профиль до PDF/A-3b, DECISIONS.md п.5),
  * и текстовые поля метаданных карточки СХЭД (title/author/subject/sourceSystem/documentType/
- * documentDate/flavour/ocrLanguage/strictValidation).
+ * documentDate/flavour/ocrLanguage/strictValidation). Целевой формат — строго PDF/A-1 (часть 1
+ * стандарта, ISO 19005-1): поле "flavour" принимает только {@code 1a}/{@code 1b} (дефолт 1b,
+ * см. {@link by.eshed.pdfa.model.PdfAFlavourOption#parse}), любой другой профиль отклоняется
+ * с HTTP 400. Файловая часть "signature" не поддерживается — часть 1 стандарта запрещает
+ * вложенные файлы (/EmbeddedFiles) — и тоже отклоняется с HTTP 400 (PLAN.md).
  */
 public final class ConvertScanHandler implements HttpHandler {
 
@@ -88,7 +90,8 @@ public final class ConvertScanHandler implements HttpHandler {
                     SourceFormat format = SourceFormats.detect(part.contentType(), part.filename());
                     pages.add(new PageSource(part.data(), format));
                 } else if ("signature".equals(name)) {
-                    builder.attachment(new SignatureAttachment(part.data(), part.filename(), part.contentType()));
+                    throw new IllegalArgumentException("Вложение подписи не поддерживается: целевой формат "
+                            + "PDF/A-1 запрещает вложенные файлы");
                 }
                 continue;
             }
@@ -114,6 +117,9 @@ public final class ConvertScanHandler implements HttpHandler {
                     break;
                 case "documentDate":
                     metadata.documentDate(LocalDate.parse(value));
+                    break;
+                case "language":
+                    metadata.language(value);
                     break;
                 case "flavour":
                     builder.flavour(PdfAFlavourOption.parse(value));

@@ -21,9 +21,14 @@ public final class ConversionRequest {
         this.metadata = b.metadata != null ? b.metadata : DocumentMetadata.builder().build();
         this.ocrEnabled = b.ocrEnabled;
         this.ocrLanguage = b.ocrLanguage;
-        // Вложение файла подписи возможно только в PDF/A-3 (A-3 разрешает embedded files,
-        // см. DECISIONS.md п.5) — при наличии вложения профиль повышается автоматически.
-        this.flavour = b.attachment != null ? PdfAFlavourOption.PDF_A_3B : b.flavour;
+        // PLAN.md: конвертер фиксирован на PDF/A-1 (часть 1) — она запрещает /EmbeddedFiles,
+        // поэтому вложение подписи больше не повышает профиль до PDF/A-3b (как было раньше,
+        // DECISIONS.md п.5), а отклоняется как несовместимое с целевым форматом.
+        if (b.attachment != null) {
+            throw new IllegalArgumentException("Вложение файла (подпись) несовместимо с PDF/A-1: "
+                    + "часть 1 стандарта запрещает /EmbeddedFiles");
+        }
+        this.flavour = b.flavour;
         this.attachment = b.attachment;
         this.strictValidation = b.strictValidation;
     }
@@ -65,7 +70,7 @@ public final class ConversionRequest {
         private DocumentMetadata metadata;
         private boolean ocrEnabled = true; // DECISIONS.md п.2: OCR всегда
         private String ocrLanguage = "rus+eng";
-        private PdfAFlavourOption flavour = PdfAFlavourOption.PDF_A_2B; // DECISIONS.md п.1
+        private PdfAFlavourOption flavour = PdfAFlavourOption.PDF_A_1B; // PLAN.md: дефолт PDF/A-1b
         private SignatureAttachment attachment;
         private boolean strictValidation = true; // veraPDF как обязательный гейт
 
