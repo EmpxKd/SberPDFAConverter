@@ -1,0 +1,40 @@
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+.kotlin
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+/target
+.~lock.HDC-43057 Формат pdf.a (BA) 1.docx#
+CLAUDE.md
+DECISIONS.md
+HDC-43057 Формат pdf.a (BA) 1.docx
+IMPLEMENTATION_LOG.md
+PDFA1_REQUIREMENTS.md
+письмо по pdfA (анализ) 1.docx
+описание задачи 1.txt

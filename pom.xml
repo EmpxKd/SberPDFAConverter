@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>by.eshed.pdfa</groupId>
+    <artifactId>pdfa-converter</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>СХЭД PDF/A Converter</name>
+    <description>
+        Конвертация сканов бумажных документов (TIFF/JPEG/PNG/BMP/PDF) в PDF/A-2b (или PDF/A-3b
+        при вложении файла подписи) с OCR-слоем Tesseract и обязательной валидацией veraPDF.
+        Стек: Apache PDFBox + Tesseract(tess4j) + veraPDF — Вариант А из DECISIONS.md.
+    </description>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <pdfbox.version>3.0.7</pdfbox.version>
+        <tess4j.version>5.19.0</tess4j.version>
+        <verapdf.version>1.28.2</verapdf.version>
+        <junit.version>5.10.2</junit.version>
+    </properties>
+
+    <dependencies>
+        <!-- Сборка PDF и работа с XMP-метаданными -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>xmpbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+
+        <!-- OCR (требует системно установленный Tesseract, см. README в Main) -->
+        <dependency>
+            <groupId>net.sourceforge.tess4j</groupId>
+            <artifactId>tess4j</artifactId>
+            <version>${tess4j.version}</version>
+        </dependency>
+
+        <!-- Обязательный гейт валидации PDF/A на выходе конвертера. Greenfield-движок
+             (validation-model, не pdfbox-validation-model) - у него нет собственного форка
+             PDFBox вовсе, см. IMPLEMENTATION_LOG.md ("...переход на Greenfield-движок").
+             wcag-validation исключён явно: единственная зависимость во всём дереве validation-model,
+             которая тащит (через wcag-algorithms) РЕАЛЬНЫЙ org.apache.pdfbox:pdfbox:2.0.24 -
+             помечена <optional>true</optional> в самом validation-model, поэтому сама по себе не
+             резолвится транзитивно, но исключаем defensively: WCAG/PDF-UA проверки доступности
+             этому проекту не нужны, и так надёжнее на случай будущего patch-релиза. -->
+        <dependency>
+            <groupId>org.verapdf</groupId>
+            <artifactId>validation-model</artifactId>
+            <version>${verapdf.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.verapdf</groupId>
+                    <artifactId>wcag-validation</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Тесты -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>pdfa-converter</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+            <!-- Исполняемый jar со всеми зависимостями для локального запуска (REST-сервер/CLI).
+                 veraPDF (validation-model, Greenfield-движок) вызывается прямо из этого процесса
+                 (см. IMPLEMENTATION_LOG.md, "...переход на Greenfield-движок") - его классы должны
+                 попасть в общий fat-jar. Никаких artifactSet-исключений для org.verapdf:* здесь
+                 больше не нужно: у Greenfield нет форка PDFBox, который мог бы столкнуться
+                 с org.apache.pdfbox:pdfbox:3.0.7 при слиянии jar-ов. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Среди зависимостей (Bouncy Castle) есть подписанные jar-и - их
+                                 META-INF/*.SF и META-INF/*.DSA после слияния больше не совпадают
+                                 с реальным содержимым merged-манифеста, и JVM отказывается
+                                 загружать главный класс ("Invalid signature file digest"). Файлы
+                                 подписи внутри fat-jar не нужны - подписи проверяются на jar-ах
+                                 поставщиков до сборки, а не на нашем итоговом артефакте. -->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/*.EC</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>by.eshed.pdfa.Main</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
