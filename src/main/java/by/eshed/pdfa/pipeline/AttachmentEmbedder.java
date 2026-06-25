@@ -18,10 +18,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Сводит отдельный файл подписи и документ "в один воспринимаемый документ" (описание задачи
- * 1.txt п.13) через embedded file PDF/A-3 (DECISIONS.md п.5: конвертация -> подпись, отдельный
- * файл подписи присоединяется вложением). Помимо Names/EmbeddedFiles пишется и каталоговый
- * массив /AF с /AFRelationship — это требование ISO 19005-3 (Associated Files) сверх PDF/A-2.
+ * Сводит отдельный файл подписи и документ в один воспринимаемый документ через embedded file
+ * PDF/A-3: отдельный файл подписи присоединяется вложением. Помимо Names/EmbeddedFiles пишется и
+ * каталоговый массив /AF с /AFRelationship — это требование ISO 19005-3 (Associated Files) сверх
+ * PDF/A-2.
  */
 public final class AttachmentEmbedder {
 

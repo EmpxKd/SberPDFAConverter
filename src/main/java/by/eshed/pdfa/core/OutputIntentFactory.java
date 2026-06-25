@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * PDF/A требует встроенный device-independent ICC OutputIntent (описание задачи 1.txt:
- * "цвет device-independent"). Профиль sRGB IEC61966-2.1 общий для всего проекта (DECISIONS.md п.1).
+ * PDF/A требует встроенный device-independent ICC OutputIntent. Профиль sRGB IEC61966-2.1
+ * общий для всего проекта.
  */
 public final class OutputIntentFactory {
 

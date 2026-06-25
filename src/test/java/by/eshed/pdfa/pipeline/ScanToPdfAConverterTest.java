@@ -6,9 +6,7 @@ import by.eshed.pdfa.model.DocumentMetadata;
 import by.eshed.pdfa.model.PageSource;
 import by.eshed.pdfa.model.PdfAFlavourOption;
 import by.eshed.pdfa.model.SourceFormat;
-import by.eshed.pdfa.ocr.TesseractOcrEngine;
 import by.eshed.pdfa.testutil.TestImages;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -21,20 +19,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Сквозная проверка обязательного требования DECISIONS.md/PLAN.md: выход конвертера ВСЕГДА
  * проходит veraPDF как валидный PDF/A-1 (1a или 1b — никакой другой профиль не достижим, см.
  * {@code model.ConversionRequestTest} и {@code model.PdfAFlavourOptionTest} для проверки самого
- * запрета). Tesseract в этом окружении может быть недоступен (нативная зависимость, см.
- * CLAUDE.md) - тест с OCR пропускается, если он недоступен.
+ * запрета).
  */
 class ScanToPdfAConverterTest {
 
-    private final TesseractOcrEngine ocrEngine = new TesseractOcrEngine(System.getenv("TESSDATA_PREFIX"));
-    private final ScanToPdfAConverter converter = new ScanToPdfAConverter(300f, 0.75f, ocrEngine);
+    private final ScanToPdfAConverter converter = new ScanToPdfAConverter(300f, 0.75f);
 
     @Test
     void convertsBilevelScanToCompliantPdfA1bByDefault() throws Exception {
         byte[] png = TestImages.encode(TestImages.bilevelPage(400, 300), "png");
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(png, SourceFormat.PNG)))
-                .ocrEnabled(false)
                 .metadata(DocumentMetadata.builder().title("Тестовый документ").author("Тестировщик").build())
                 .build();
 
@@ -50,7 +45,6 @@ class ScanToPdfAConverterTest {
         byte[] jpeg = TestImages.encode(TestImages.colorPage(400, 300), "JPEG");
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(jpeg, SourceFormat.JPEG)))
-                .ocrEnabled(false)
                 .flavour(PdfAFlavourOption.PDF_A_1B)
                 .build();
 
@@ -67,7 +61,6 @@ class ScanToPdfAConverterTest {
                 List.of(TestImages.bilevelPage(200, 150), TestImages.bilevelPage(200, 150)));
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(tiff, SourceFormat.TIFF)))
-                .ocrEnabled(false)
                 .build();
 
         ConversionResult result = converter.convert(request);
@@ -85,13 +78,11 @@ class ScanToPdfAConverterTest {
         byte[] png = TestImages.encode(TestImages.bilevelPage(300, 200), "png");
         ConversionRequest firstPass = ConversionRequest.builder()
                 .pages(List.of(new PageSource(png, SourceFormat.PNG)))
-                .ocrEnabled(false)
                 .build();
         byte[] scannerPdf = converter.convert(firstPass).pdfBytes();
 
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(scannerPdf, SourceFormat.PDF)))
-                .ocrEnabled(false)
                 .build();
 
         ConversionResult result = converter.convert(request);
@@ -106,7 +97,6 @@ class ScanToPdfAConverterTest {
         byte[] png = TestImages.encode(TestImages.bilevelPage(300, 200), "png");
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(png, SourceFormat.PNG)))
-                .ocrEnabled(false)
                 .flavour(PdfAFlavourOption.PDF_A_1A)
                 .build();
 
@@ -118,29 +108,10 @@ class ScanToPdfAConverterTest {
     }
 
     @Test
-    void convertsColorScanWithOcrToCompliantPdfA1bWhenTesseractAvailable() throws Exception {
-        Assumptions.assumeTrue(ocrEngine.isAvailable(), "Tesseract не установлен в этом окружении - тест пропущен");
-
-        byte[] jpeg = TestImages.encode(TestImages.colorPage(400, 300), "JPEG");
-        ConversionRequest request = ConversionRequest.builder()
-                .pages(List.of(new PageSource(jpeg, SourceFormat.JPEG)))
-                .ocrEnabled(true)
-                .ocrLanguage("eng")
-                .build();
-
-        ConversionResult result = converter.convert(request);
-
-        assertTrue(result.validation().isCompliant(),
-                () -> "veraPDF failures: " + result.validation().failureMessages());
-        assertEquals(PdfAFlavourOption.PDF_A_1B, result.flavour());
-    }
-
-    @Test
     void wrapsCorruptInputAsConversionExceptionInsteadOfCrashing() {
         byte[] garbage = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(garbage, SourceFormat.PNG)))
-                .ocrEnabled(false)
                 .build();
 
         assertThrows(PdfAConversionException.class, () -> converter.convert(request));
@@ -151,7 +122,6 @@ class ScanToPdfAConverterTest {
         byte[] png = TestImages.encode(TestImages.bilevelPage(1, 1), "png");
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(png, SourceFormat.PNG)))
-                .ocrEnabled(false)
                 .build();
 
         ConversionResult result = converter.convert(request);
@@ -168,7 +138,6 @@ class ScanToPdfAConverterTest {
 
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(bmp, SourceFormat.BMP)))
-                .ocrEnabled(false)
                 .build();
 
         ConversionResult result = converter.convert(request);
@@ -184,7 +153,6 @@ class ScanToPdfAConverterTest {
         byte[] tiff = TestImages.encodeTiffWithDpi(TestImages.colorPage(100, 80), 150f);
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(tiff, SourceFormat.TIFF)))
-                .ocrEnabled(false)
                 .build();
 
         ConversionResult result = converter.convert(request);

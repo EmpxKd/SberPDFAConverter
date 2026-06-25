@@ -2,9 +2,10 @@ package by.eshed.pdfa.validation;
 
 import by.eshed.pdfa.model.ConversionRequest;
 import by.eshed.pdfa.model.ConversionResult;
+import by.eshed.pdfa.model.DocumentMetadata;
 import by.eshed.pdfa.model.PageSource;
+import by.eshed.pdfa.model.PdfAFlavourOption;
 import by.eshed.pdfa.model.SourceFormat;
-import by.eshed.pdfa.ocr.TesseractOcrEngine;
 import by.eshed.pdfa.pipeline.ScanToPdfAConverter;
 import by.eshed.pdfa.testutil.TestImages;
 import org.apache.pdfbox.Loader;
@@ -28,8 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class PdfA1bValidationTest {
 
-    private final ScanToPdfAConverter converter =
-            new ScanToPdfAConverter(300f, 0.75f, new TesseractOcrEngine(System.getenv("TESSDATA_PREFIX")));
+    private final ScanToPdfAConverter converter = new ScanToPdfAConverter(300f, 0.75f);
 
     @Test
     void rgbJpegProducesValidPdfA1b() throws Exception {
@@ -100,10 +100,82 @@ class PdfA1bValidationTest {
         }
     }
 
+    @Test
+    void customPropertiesProduceValidPdfA1bWithExtensionSchema() throws Exception {
+        assertCustomPropertiesRoundTrip(PdfAFlavourOption.PDF_A_1B);
+    }
+
+    @Test
+    void customPropertiesProduceValidPdfA1aWithExtensionSchema() throws Exception {
+        assertCustomPropertiesRoundTrip(PdfAFlavourOption.PDF_A_1A);
+    }
+
+    /**
+     * PLAN.md, "Задачи для тестировщика", сценарии 1+2: гейт veraPDF на custom-метаданных для
+     * 1a и 1b ("Аналогично 1a"), плюс настоящий round-trip — не просто факт наличия схемы/
+     * namespace, а то, что записанные пары "ключ-значение" читаются обратно из XMP с теми же
+     * значениями, а extension schema по количеству и описаниям свойств соответствует тому, что
+     * было передано на вход (а не просто "что-то записалось").
+     */
+    private void assertCustomPropertiesRoundTrip(PdfAFlavourOption flavour) throws Exception {
+        byte[] png = TestImages.encode(TestImages.bilevelPage(300, 200), "png");
+        DocumentMetadata metadata = DocumentMetadata.builder()
+                .customProperty("НомерДела", "12345")
+                .customProperty("Отдел", "Бухгалтерия")
+                .build();
+        ConversionRequest request = ConversionRequest.builder()
+                .pages(List.of(new PageSource(png, SourceFormat.PNG)))
+                .metadata(metadata)
+                .flavour(flavour)
+                .build();
+        ConversionResult result = converter.convert(request);
+
+        assertCompliant(result);
+
+        try (PDDocument document = Loader.loadPDF(result.pdfBytes())) {
+            try (var xmpStream = document.getDocumentCatalog().getMetadata().exportXMPMetadata()) {
+                XMPMetadata xmp = new DomXmpParser().parse(xmpStream);
+
+                org.apache.xmpbox.schema.XMPSchema custom = xmp.getSchema("http://eshed.by/pdfa/custom/1.0/");
+                assertNotNull(custom, "значения custom-свойств должны быть в namespace cust");
+                assertEquals("12345", custom.getUnqualifiedTextPropertyValue("custom1"));
+                assertEquals("Бухгалтерия", custom.getUnqualifiedTextPropertyValue("custom2"));
+
+                org.apache.xmpbox.schema.PDFAExtensionSchema extension = xmp.getPDFExtensionSchema();
+                assertNotNull(extension, "pdfaExtension:schemas должна быть объявлена");
+                List<org.apache.xmpbox.type.AbstractField> declaredSchemas =
+                        extension.getSchemasProperty().getAllProperties();
+                assertEquals(1, declaredSchemas.size(), "должна быть объявлена ровно одна extension schema");
+
+                org.apache.xmpbox.type.PDFASchemaType declaredSchema =
+                        (org.apache.xmpbox.type.PDFASchemaType) declaredSchemas.get(0);
+                assertEquals("http://eshed.by/pdfa/custom/1.0/", declaredSchema.getNamespaceURI());
+                assertEquals("cust", declaredSchema.getPrefixValue());
+
+                List<org.apache.xmpbox.type.AbstractField> declaredProperties =
+                        declaredSchema.getProperty().getAllProperties();
+                assertEquals(2, declaredProperties.size(),
+                        "число объявленных свойств схемы должно совпадать с числом custom-полей");
+
+                org.apache.xmpbox.type.PDFAPropertyType firstProperty =
+                        (org.apache.xmpbox.type.PDFAPropertyType) declaredProperties.get(0);
+                assertEquals("custom1", firstProperty.getName());
+                assertEquals("НомерДела", firstProperty.getDescription(),
+                        "человекочитаемый ключ заказчика должен сохраниться в description");
+                assertEquals("Text", firstProperty.getValueType());
+                assertEquals("external", firstProperty.getCategory());
+
+                org.apache.xmpbox.type.PDFAPropertyType secondProperty =
+                        (org.apache.xmpbox.type.PDFAPropertyType) declaredProperties.get(1);
+                assertEquals("custom2", secondProperty.getName());
+                assertEquals("Отдел", secondProperty.getDescription());
+            }
+        }
+    }
+
     private ConversionResult convert(byte[] data, SourceFormat format) {
         ConversionRequest request = ConversionRequest.builder()
                 .pages(List.of(new PageSource(data, format)))
-                .ocrEnabled(false)
                 .build();
         return converter.convert(request);
     }

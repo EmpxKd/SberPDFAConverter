@@ -1,4 +1,4 @@
-package by.eshed.pdfa.http;
+package by.eshed.pdfa.web;
 
 import by.eshed.pdfa.model.SourceFormat;
 

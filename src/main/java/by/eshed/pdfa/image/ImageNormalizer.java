@@ -19,9 +19,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Декодирует TIFF (в т.ч. многостраничный)/JPEG/PNG/BMP через штатный javax.imageio (см.
- * IMPLEMENTATION_LOG.md — JDK 9+ включает встроенный TIFF-плагин, внешняя библиотека не нужна)
- * и приводит страницы к единому DPI (DECISIONS.md п.3 и п.8).
+ * Декодирует TIFF (в т.ч. многостраничный)/JPEG/PNG/BMP через штатный javax.imageio (JDK 9+
+ * включает встроенный TIFF-плагин, внешняя библиотека не нужна) и приводит страницы к единому DPI.
  */
 public final class ImageNormalizer {
 

@@ -4,6 +4,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- Spring Boot 3 требует Java 17 минимум — родительский POM настраивает компилятор,
+         упаковку (repackage) и версии стартеров через свой dependencyManagement/pluginManagement. -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.15</version>
+        <relativePath/>
+    </parent>
+
     <groupId>by.eshed.pdfa</groupId>
     <artifactId>pdfa-converter</artifactId>
     <version>1.0.0</version>
@@ -11,23 +20,53 @@
 
     <name>СХЭД PDF/A Converter</name>
     <description>
-        Конвертация сканов бумажных документов (TIFF/JPEG/PNG/BMP/PDF) в PDF/A-2b (или PDF/A-3b
-        при вложении файла подписи) с OCR-слоем Tesseract и обязательной валидацией veraPDF.
-        Стек: Apache PDFBox + Tesseract(tess4j) + veraPDF — Вариант А из DECISIONS.md.
+        Конвертация сканов бумажных документов (TIFF/JPEG/PNG/BMP/PDF) в PDF/A-1 (1a/1b) с
+        произвольными метаданными заказчика и обязательной валидацией veraPDF.
+        Стек: Spring Boot 3 + Apache PDFBox + veraPDF.
     </description>
 
     <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <pdfbox.version>3.0.7</pdfbox.version>
-        <tess4j.version>5.19.0</tess4j.version>
         <verapdf.version>1.28.2</verapdf.version>
-        <junit.version>5.10.2</junit.version>
     </properties>
 
+    <!-- Не повышать эти версии: Spring Boot BOM пинует jaxb-impl/jaxb-core на 4.0.9
+         (Jakarta-namespace), а org.verapdf:core требует javax-namespace реализацию
+         (jaxb-impl:2.3.2/jaxb-core:2.3.0.1). Без этого override veraPDF не находит
+         javax.xml.bind-реализацию и ProfileDirectory остаётся пустым. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-impl</artifactId>
+                <version>2.3.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-core</artifactId>
+                <version>2.3.0.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- Spring Boot REST-слой: embedded Tomcat, Jackson, multipart. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Сборка PDF и работа с XMP-метаданными -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
@@ -40,16 +79,8 @@
             <version>${pdfbox.version}</version>
         </dependency>
 
-        <!-- OCR (требует системно установленный Tesseract, см. README в Main) -->
-        <dependency>
-            <groupId>net.sourceforge.tess4j</groupId>
-            <artifactId>tess4j</artifactId>
-            <version>${tess4j.version}</version>
-        </dependency>
-
         <!-- Обязательный гейт валидации PDF/A на выходе конвертера. Greenfield-движок
-             (validation-model, не pdfbox-validation-model) - у него нет собственного форка
-             PDFBox вовсе, см. IMPLEMENTATION_LOG.md ("...переход на Greenfield-движок").
+             (validation-model, не pdfbox-validation-model) - у него нет собственного форка PDFBox.
              wcag-validation исключён явно: единственная зависимость во всём дереве validation-model,
              которая тащит (через wcag-algorithms) РЕАЛЬНЫЙ org.apache.pdfbox:pdfbox:2.0.24 -
              помечена <optional>true</optional> в самом validation-model, поэтому сама по себе не
@@ -66,69 +97,25 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
-        <!-- Тесты -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
         <finalName>pdfa-converter</finalName>
         <plugins>
+            <!-- Spring Boot кладёт зависимости вложенными jar-ами под BOOT-INF/lib/, а не слитыми
+                 классами - подписанный jar Bouncy Castle остаётся неизменным, поэтому фильтр
+                 META-INF/*.SF/.DSA/.RSA/.EC (нужный только при слиянии shade) не нужен. -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-            </plugin>
-            <!-- Исполняемый jar со всеми зависимостями для локального запуска (REST-сервер/CLI).
-                 veraPDF (validation-model, Greenfield-движок) вызывается прямо из этого процесса
-                 (см. IMPLEMENTATION_LOG.md, "...переход на Greenfield-движок") - его классы должны
-                 попасть в общий fat-jar. Никаких artifactSet-исключений для org.verapdf:* здесь
-                 больше не нужно: у Greenfield нет форка PDFBox, который мог бы столкнуться
-                 с org.apache.pdfbox:pdfbox:3.0.7 при слиянии jar-ов. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.3</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>by.eshed.pdfa.PdfaApplication</mainClass>
+                </configuration>
                 <executions>
                     <execution>
-                        <phase>package</phase>
                         <goals>
-                            <goal>shade</goal>
+                            <goal>repackage</goal>
                         </goals>
-                        <configuration>
-                            <!-- Среди зависимостей (Bouncy Castle) есть подписанные jar-и - их
-                                 META-INF/*.SF и META-INF/*.DSA после слияния больше не совпадают
-                                 с реальным содержимым merged-манифеста, и JVM отказывается
-                                 загружать главный класс ("Invalid signature file digest"). Файлы
-                                 подписи внутри fat-jar не нужны - подписи проверяются на jar-ах
-                                 поставщиков до сборки, а не на нашем итоговом артефакте. -->
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                        <exclude>META-INF/*.EC</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>by.eshed.pdfa.Main</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

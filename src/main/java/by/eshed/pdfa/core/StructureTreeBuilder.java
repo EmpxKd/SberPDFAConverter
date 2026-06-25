@@ -16,15 +16,10 @@ import java.util.logging.Logger;
 
 /**
  * Строит минимальное дерево структуры (Tagged PDF), нужное только для PDF/A-1a
- * (ISO 19005-1, 6.8: {@code /MarkInfo}, {@code /StructTreeRoot}). Состав ограничен тем, что
- * реально проверяет движок veraPDF — см. PDFA-1A.xml движка ({@code org.verapdf:core},
- * правила clause="6.8.*") и разбор в IMPLEMENTATION_LOG.md ("Спайк PDF/A-1a"): набор правил
- * не требует ActualText/Alt на уровне отдельных слов OCR и не проверяет соответствие
- * marked-content и структуры глубже присутствия {@code /StructTreeRoot} и {@code Marked=true}.
- * Несмотря на это, дерево строится содержательно (Document -> Figure на страницу,
- * привязанный к реальному marked-content и ParentTree), а не «пустышкой для валидатора» —
- * только без избыточной детализации (без Span/ActualText на словах OCR-слоя, без RoleMap,
- * который не нужен при использовании только стандартных типов).
+ * (ISO 19005-1, 6.8: {@code /MarkInfo}, {@code /StructTreeRoot}). Дерево строится содержательно
+ * (Document -> Figure на страницу, привязанный к реальному marked-content и ParentTree), но без
+ * избыточной детализации (без Span/ActualText на словах, без RoleMap) — veraPDF не требует
+ * большего для прохождения правил clause="6.8.*".
  */
 public final class StructureTreeBuilder {
 

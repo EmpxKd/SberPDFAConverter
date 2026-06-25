@@ -16,15 +16,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Обязательный гейт конвертера: PDFBox сам по себе не гарантирует соответствие PDF/A
- * (DECISIONS.md, минусы Варианта А), гарантию даёт только прогон через veraPDF - тот же
- * валидатор, что используют архивные учреждения.
+ * Обязательный гейт конвертера: PDFBox сам по себе не гарантирует соответствие PDF/A, гарантию
+ * даёт только прогон через veraPDF - тот же валидатор, что используют архивные учреждения.
  *
- * Использует Greenfield-движок veraPDF (org.verapdf:validation-model, см. IMPLEMENTATION_LOG.md,
- * "...переход на Greenfield-движок") и вызывается прямо из этого процесса. В отличие от прежнего
- * PDFBox-движка (org.verapdf:pdfbox-validation-model) у Greenfield нет собственного форка Apache
- * PDFBox: коллизия классов с org.apache.pdfbox:pdfbox:3.0.7, на котором работает весь остальной
- * код, физически невозможна, поэтому отдельный JVM-подпроцесс (как было раньше) больше не нужен.
+ * Использует Greenfield-движок veraPDF (org.verapdf:validation-model) и вызывается прямо из этого
+ * процесса. В отличие от PDFBox-движка (org.verapdf:pdfbox-validation-model) у Greenfield нет
+ * собственного форка Apache PDFBox: коллизия классов с org.apache.pdfbox:pdfbox:3.0.7, на котором
+ * работает весь остальной код, физически невозможна, поэтому отдельный JVM-подпроцесс не нужен.
  */
 public final class VeraPdfValidator {
 

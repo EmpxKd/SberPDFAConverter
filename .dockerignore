@@ -1,0 +1,7 @@
+target/
+.jdks/
+.idea/
+ai-prompts/
+*.md
+*.docx
+*.txt

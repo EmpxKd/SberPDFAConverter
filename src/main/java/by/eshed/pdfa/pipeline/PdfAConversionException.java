@@ -3,9 +3,8 @@ package by.eshed.pdfa.pipeline;
 import by.eshed.pdfa.validation.ValidationOutcome;
 
 /**
- * Сбой конвейера конвертации. Если причина — провал обязательного гейта veraPDF
- * (DECISIONS.md п.6: "конвертер обязан гарантировать соответствие"), {@link #validationOutcome()}
- * содержит список нарушенных правил для диагностики на стороне СХЭД.
+ * Сбой конвейера конвертации. Если причина — провал обязательного гейта veraPDF,
+ * {@link #validationOutcome()} содержит список нарушенных правил для диагностики на стороне СХЭД.
  */
 public final class PdfAConversionException extends RuntimeException {
 

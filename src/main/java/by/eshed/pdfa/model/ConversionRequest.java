@@ -7,8 +7,6 @@ public final class ConversionRequest {
 
     private final List<PageSource> pages;
     private final DocumentMetadata metadata;
-    private final boolean ocrEnabled;
-    private final String ocrLanguage;
     private final PdfAFlavourOption flavour;
     private final SignatureAttachment attachment;
     private final boolean strictValidation;
@@ -19,11 +17,8 @@ public final class ConversionRequest {
             throw new IllegalArgumentException("Нужна хотя бы одна страница скана");
         }
         this.metadata = b.metadata != null ? b.metadata : DocumentMetadata.builder().build();
-        this.ocrEnabled = b.ocrEnabled;
-        this.ocrLanguage = b.ocrLanguage;
-        // PLAN.md: конвертер фиксирован на PDF/A-1 (часть 1) — она запрещает /EmbeddedFiles,
-        // поэтому вложение подписи больше не повышает профиль до PDF/A-3b (как было раньше,
-        // DECISIONS.md п.5), а отклоняется как несовместимое с целевым форматом.
+        // Конвертер фиксирован на PDF/A-1 (часть 1) — она запрещает /EmbeddedFiles, поэтому
+        // вложение подписи отклоняется как несовместимое с целевым форматом.
         if (b.attachment != null) {
             throw new IllegalArgumentException("Вложение файла (подпись) несовместимо с PDF/A-1: "
                     + "часть 1 стандарта запрещает /EmbeddedFiles");
@@ -39,14 +34,6 @@ public final class ConversionRequest {
 
     public DocumentMetadata metadata() {
         return metadata;
-    }
-
-    public boolean ocrEnabled() {
-        return ocrEnabled;
-    }
-
-    public String ocrLanguage() {
-        return ocrLanguage;
     }
 
     public PdfAFlavourOption flavour() {
@@ -68,9 +55,7 @@ public final class ConversionRequest {
     public static final class Builder {
         private List<PageSource> pages = List.of();
         private DocumentMetadata metadata;
-        private boolean ocrEnabled = true; // DECISIONS.md п.2: OCR всегда
-        private String ocrLanguage = "rus+eng";
-        private PdfAFlavourOption flavour = PdfAFlavourOption.PDF_A_1B; // PLAN.md: дефолт PDF/A-1b
+        private PdfAFlavourOption flavour = PdfAFlavourOption.PDF_A_1B; // дефолт PDF/A-1b
         private SignatureAttachment attachment;
         private boolean strictValidation = true; // veraPDF как обязательный гейт
 
@@ -81,18 +66,6 @@ public final class ConversionRequest {
 
         public Builder metadata(DocumentMetadata metadata) {
             this.metadata = metadata;
-            return this;
-        }
-
-        public Builder ocrEnabled(boolean ocrEnabled) {
-            this.ocrEnabled = ocrEnabled;
-            return this;
-        }
-
-        public Builder ocrLanguage(String ocrLanguage) {
-            if (ocrLanguage != null && !ocrLanguage.isBlank()) {
-                this.ocrLanguage = ocrLanguage;
-            }
             return this;
         }
 

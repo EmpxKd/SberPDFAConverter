@@ -1,0 +1,34 @@
+server:
+  port: 8080
+  tomcat:
+    # Поднято под батч: один запрос несёт много файлов суммой больше, чем один документ -
+    # 300MB хватало на один скан, не на тысячи.
+    max-http-form-post-size: 2GB
+
+spring:
+  application:
+    name: pdfa-converter
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 2GB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+pdfa:
+  batch:
+    # Число воркеров пула батч-конвертации (ConversionExecutor). 0 = число ядер CPU на старте.
+    workers: 0
+    # Ёмкость ограниченной очереди задач-документов. Переполнение -> 429 + Retry-After
+    # (BatchJobService отклоняет батч целиком, без частичной постановки в очередь).
+    queue-capacity: 1000
+    # Каталог готовых PDF на диске. Пусто = ${java.io.tmpdir}/pdfa-batch.
+    result-dir: ""
+    # Сколько часов хранить результаты батча на диске до TTL-уборки (ResultCleanupTask).
+    result-ttl-hours: 24
+    # Удалять каталог результатов сразу после успешного скачивания ZIP завершённого батча.
+    delete-on-download: false

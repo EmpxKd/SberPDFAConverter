@@ -1,7 +1,7 @@
 package by.eshed.pdfa.model;
 
 /**
- * Допустимые форматы входа скана (DECISIONS.md, п.3: "универсальный приём").
+ * Допустимые форматы входа скана.
  */
 public enum SourceFormat {
     TIFF,

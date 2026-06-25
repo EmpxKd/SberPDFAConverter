@@ -32,12 +32,6 @@ class ConversionRequestTest {
     }
 
     @Test
-    void defaultsToOcrEnabled() {
-        ConversionRequest request = ConversionRequest.builder().pages(List.of(page())).build();
-        assertTrue(request.ocrEnabled());
-    }
-
-    @Test
     void rejectsSignatureAttachment() {
         SignatureAttachment attachment = new SignatureAttachment(
                 "sig".getBytes(StandardCharsets.UTF_8), "signature.sig", "application/octet-stream");

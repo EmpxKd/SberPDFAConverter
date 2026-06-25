@@ -25,7 +25,7 @@ class PdfABuilderTest {
     void taggedBuildWritesStructureTreeAndMarkInfoAndLang() throws Exception {
         NormalizedPage page = new NormalizedPage(TestImages.colorPage(100, 80), 300f, false);
 
-        try (var document = builder.build(List.of(page), true, "ru").document()) {
+        try (var document = builder.build(List.of(page), true, "ru")) {
             PDDocumentCatalog catalog = document.getDocumentCatalog();
             assertNotNull(catalog.getStructureTreeRoot(), "/StructTreeRoot должен быть записан для 1a");
             assertNotNull(catalog.getMarkInfo(), "/MarkInfo должен быть записан для 1a");
@@ -38,7 +38,7 @@ class PdfABuilderTest {
     void untaggedBuildHasNoStructureTree() throws Exception {
         NormalizedPage page = new NormalizedPage(TestImages.colorPage(100, 80), 300f, false);
 
-        try (var document = builder.build(List.of(page), false, "ru").document()) {
+        try (var document = builder.build(List.of(page), false, "ru")) {
             PDDocumentCatalog catalog = document.getDocumentCatalog();
             assertNull(catalog.getStructureTreeRoot(), "1b не должен получать структуру тегов");
             assertFalse(catalog.getMarkInfo() != null && catalog.getMarkInfo().isMarked());

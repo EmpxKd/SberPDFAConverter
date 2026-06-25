@@ -12,9 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Растеризует постраничный PDF, собранный сканером (входной формат "уже PDF от сканера",
- * описание задачи 1.txt п.3), в изображения по тому же конвейеру, что и обычные сканы — на
- * выходе всегда заново собранный PDFBox-ом PDF/A, а не исходный файл сканера as-is.
+ * Растеризует постраничный PDF, собранный сканером, в изображения по тому же конвейеру, что и
+ * обычные сканы — на выходе всегда заново собранный PDFBox-ом PDF/A, а не исходный файл сканера
+ * as-is.
  */
 public final class PdfPageRasterizer {
 
@@ -34,7 +34,7 @@ public final class PdfPageRasterizer {
             for (int i = 0; i < document.getNumberOfPages(); i++) {
                 BufferedImage image = renderer.renderImageWithDPI(i, targetDpi, ImageType.RGB);
                 // Исходная цветность отдельной страницы сканер-PDF не анализируется -
-                // рендерится как цветное изображение (упрощение, см. IMPLEMENTATION_LOG.md).
+                // рендерится как цветное изображение (упрощение).
                 pages.add(new NormalizedPage(image, targetDpi, false));
             }
         }

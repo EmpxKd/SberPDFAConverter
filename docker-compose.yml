@@ -1,0 +1,6 @@
+services:
+  pdfa-converter:
+    build: .
+    image: pdfa-converter
+    ports:
+      - "8080:8080"

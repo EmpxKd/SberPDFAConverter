@@ -5,8 +5,8 @@ import org.verapdf.pdfa.flavours.PDFAFlavour;
 import java.util.List;
 
 /**
- * Результат прогона veraPDF — обязательного гейта конвертера (DECISIONS.md: "выход проходит
- * veraPDF как валидный PDF/A-Xb без ошибок").
+ * Результат прогона veraPDF — обязательного гейта конвертера: выход должен проходить veraPDF
+ * как валидный PDF/A без ошибок.
  */
 public final class ValidationOutcome {
 
