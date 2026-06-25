@@ -48,13 +48,6 @@ public final class ScanToPdfAConverter {
         try (PDDocument doc = document) {
             OutputIntentFactory.addSRgbOutputIntent(doc);
 
-            if (request.attachment() != null) {
-                try {
-                    AttachmentEmbedder.embed(doc, request.attachment());
-                } catch (IOException e) {
-                    throw new PdfAConversionException("Не удалось встроить файл подписи (PDF/A-3)", e);
-                }
-            }
 
             try {
                 MetadataMapper.apply(doc, request.metadata(), request.flavour());

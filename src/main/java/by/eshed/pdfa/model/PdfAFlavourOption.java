@@ -14,9 +14,7 @@ import org.verapdf.pdfa.flavours.PDFAFlavour;
 public enum PdfAFlavourOption {
 
     PDF_A_1A(PDFAFlavour.PDFA_1_A, 1, "A"),
-    PDF_A_1B(PDFAFlavour.PDFA_1_B, 1, "B"),
-    PDF_A_2B(PDFAFlavour.PDFA_2_B, 2, "B"),
-    PDF_A_3B(PDFAFlavour.PDFA_3_B, 3, "B");
+    PDF_A_1B(PDFAFlavour.PDFA_1_B, 1, "B");
 
     private final PDFAFlavour veraPdfFlavour;
     private final int part;

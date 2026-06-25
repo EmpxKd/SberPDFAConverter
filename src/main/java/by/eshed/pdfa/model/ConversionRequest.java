@@ -8,7 +8,6 @@ public final class ConversionRequest {
     private final List<PageSource> pages;
     private final DocumentMetadata metadata;
     private final PdfAFlavourOption flavour;
-    private final SignatureAttachment attachment;
     private final boolean strictValidation;
 
     private ConversionRequest(Builder b) {
@@ -17,14 +16,7 @@ public final class ConversionRequest {
             throw new IllegalArgumentException("Нужна хотя бы одна страница скана");
         }
         this.metadata = b.metadata != null ? b.metadata : DocumentMetadata.builder().build();
-        // Конвертер фиксирован на PDF/A-1 (часть 1) — она запрещает /EmbeddedFiles, поэтому
-        // вложение подписи отклоняется как несовместимое с целевым форматом.
-        if (b.attachment != null) {
-            throw new IllegalArgumentException("Вложение файла (подпись) несовместимо с PDF/A-1: "
-                    + "часть 1 стандарта запрещает /EmbeddedFiles");
-        }
         this.flavour = b.flavour;
-        this.attachment = b.attachment;
         this.strictValidation = b.strictValidation;
     }
 
@@ -40,9 +32,6 @@ public final class ConversionRequest {
         return flavour;
     }
 
-    public SignatureAttachment attachment() {
-        return attachment;
-    }
 
     public boolean strictValidation() {
         return strictValidation;
@@ -56,7 +45,6 @@ public final class ConversionRequest {
         private List<PageSource> pages = List.of();
         private DocumentMetadata metadata;
         private PdfAFlavourOption flavour = PdfAFlavourOption.PDF_A_1B; // дефолт PDF/A-1b
-        private SignatureAttachment attachment;
         private boolean strictValidation = true; // veraPDF как обязательный гейт
 
         public Builder pages(List<PageSource> pages) {
@@ -71,11 +59,6 @@ public final class ConversionRequest {
 
         public Builder flavour(PdfAFlavourOption flavour) {
             this.flavour = Objects.requireNonNull(flavour, "flavour");
-            return this;
-        }
-
-        public Builder attachment(SignatureAttachment attachment) {
-            this.attachment = attachment;
             return this;
         }
 
