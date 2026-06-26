@@ -8,8 +8,10 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.stream.ImageInputStream;
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -60,6 +62,8 @@ public final class ImageNormalizer {
             int numImages = reader.getNumImages(true);
             for (int i = 0; i < numImages; i++) {
                 BufferedImage raw = reader.read(i);
+                raw = convertCmykToRgbIfNeeded(raw);
+                raw = flattenAlphaIfNeeded(raw);
                 float dpi = extractDpi(safeMetadata(reader, i)).orElse(targetDpi);
                 boolean bilevel = isBilevel(raw);
                 BufferedImage normalized = resampleIfNeeded(raw, dpi, bilevel);
@@ -80,6 +84,47 @@ public final class ImageNormalizer {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    private static BufferedImage flattenAlphaIfNeeded(BufferedImage image) {
+        if (!image.getColorModel().hasAlpha()) {
+            return image;
+        }
+        BufferedImage flat = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = flat.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, image.getWidth(), image.getHeight());
+        g.drawImage(image, 0, 0, null);
+        g.dispose();
+        return flat;
+    }
+
+    private static BufferedImage convertCmykToRgbIfNeeded(BufferedImage image) {
+        if (image.getColorModel().getColorSpace().getType() != ColorSpace.TYPE_CMYK) {
+            return image;
+        }
+        // ColorConvertOp на CMYK TYPE_CUSTOM от javax.imageio падает с AIOOBE (JDK-баг:
+        // ComponentColorModel.getNormalizedComponents получает массив меньше числа бэндов растра).
+        // Конвертируем вручную: Adobe CMYK JPEG хранит значения инвертированными (255 = 0% краски).
+        int w = image.getWidth();
+        int h = image.getHeight();
+        BufferedImage rgb = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        int bands = image.getRaster().getNumBands();
+        int[] row = new int[w * bands];
+        for (int y = 0; y < h; y++) {
+            image.getRaster().getPixels(0, y, w, 1, row);
+            for (int x = 0; x < w; x++) {
+                int c  = 255 - row[x * bands];
+                int m  = 255 - row[x * bands + 1];
+                int yy = 255 - row[x * bands + 2];
+                int k  = 255 - row[x * bands + 3];
+                int r = (255 - c) * (255 - k) / 255;
+                int g = (255 - m) * (255 - k) / 255;
+                int b = (255 - yy) * (255 - k) / 255;
+                rgb.setRGB(x, y, (r << 16) | (g << 8) | b);
+            }
+        }
+        return rgb;
     }
 
     private boolean isBilevel(BufferedImage image) {

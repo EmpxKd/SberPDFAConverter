@@ -12,7 +12,6 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.xmpbox.XMPMetadata;
 import org.apache.xmpbox.xml.DomXmpParser;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -44,11 +43,6 @@ class PdfA1bValidationTest {
     }
 
     @Test
-    @Disabled("Найденный дефект, не входит в задачи PLAN.md: ImageNormalizer/PdfABuilder не сводят "
-            + "альфа-канал PNG на непрозрачный фон, итоговый image XObject получает /SMask -> veraPDF "
-            + "падает на ISO 19005-1:2005 6.4.2 'An XObject dictionary shall not contain the SMask key' "
-            + "(PDFA1_REQUIREMENTS.md: PDF/A-1 запрещает прозрачность/soft mask). Снять @Disabled, когда "
-            + "конвейер начнёт компоновать альфу на белый фон перед JPEGFactory.createFromImage.")
     void pngWithAlphaProducesValidPdfA1b() throws Exception {
         byte[] png = TestImages.encode(TestImages.colorPageWithAlpha(300, 200), "png");
         assertCompliant(convert(png, SourceFormat.PNG));
@@ -61,11 +55,6 @@ class PdfA1bValidationTest {
     }
 
     @Test
-    @Disabled("Найденный дефект, не входит в задачи PLAN.md: ImageNormalizer декодирует 4-компонентный "
-            + "CMYK JPEG через javax.imageio в TYPE_CUSTOM BufferedImage (растровый, не TYPE_INT_RGB), "
-            + "и PDFBox JPEGFactory.createFromImage падает с NullPointerException на этом растре "
-            + "(JPEGFactory.java:376, encodeImageToJPEGStream) - конвейер не приводит CMYK к RGB перед "
-            + "сборкой страницы. Снять @Disabled, когда появится явная конвертация CMYK->RGB в ImageNormalizer.")
     void cmykJpegProducesValidPdfA1b() throws Exception {
         byte[] cmyk = TestImages.cmykJpegSample();
         assertCompliant(convert(cmyk, SourceFormat.JPEG));
